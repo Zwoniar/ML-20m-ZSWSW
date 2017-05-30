@@ -163,14 +163,14 @@ def getOMDbMovieData(imdbId):
 
 
 def saveTMDbMovieDataRecord(movieId,TMDbMovieDataRecord):
-   #print("movieId: ",movieId)
-   #print("TMDbMovieDataRecord: ",TMDbMovieDataRecord)
+    print("movieId: ",movieId)
+    print("TMDbMovieDataRecord: ",TMDbMovieDataRecord)
     tempFileName="ML20MAugmentationTextsAPIsDataGrabberData/dataFromTMDBAPI/overviews/"+str(movieId)
-    tempFile = open(tempFileName,'w')
+    tempFile = open(tempFileName,'w',  encoding="utf-8")
     tempFile.write(TMDbMovieDataRecord["overview"])
     tempFile.close
     tempFileName="ML20MAugmentationTextsAPIsDataGrabberData/dataFromTMDBAPI/reviews/"+str(movieId)
-    tempFile = open(tempFileName,'w')
+    tempFile = open(tempFileName,'w', encoding="utf-8")
     tempFile.write(TMDbMovieDataRecord["reviews"])
     tempFile.close
 
@@ -196,11 +196,11 @@ def saveOMDbMovieDataRecordTokensFromAll(movieId,tokenizedOMDbMovieData):
 def saveTokenizedTMDbMovieDataRecord(movieId,tokenizedTMDbMovieData):
     #print("movieId: ",movieId)
     tempFileName="ML20MAugmentationTextsAPIsDataGrabberData/dataFromTMDBAPI/tokenizedTMDbMovieData/"+str(movieId)
-    tempFile = open(tempFileName,'w')
+    tempFile = open(tempFileName,'w', encoding='utf-8')
     tempFile.write(repr(tokenizedTMDbMovieData))
     tempFile.close
     tempFileName+="_featuresList"
-    tempFile = open(tempFileName,'w')
+    tempFile = open(tempFileName,'w', encoding='utf-8')
     featuresList=[]
     tempKeysList=tokenizedTMDbMovieData.keys()
     for tempKeysListItem in tempKeysList:
@@ -238,10 +238,24 @@ def tokenizeMovieData(movieData):
             veryTempSetOfTokensFromNSubj=set()
             veryTempSetOfTokensFromNAll=set()
             #print("tempSentence: ",tempSentence)
+            # tempSentence = 'London is a big city in the United Kingdom.'
             doc = nlp(tempSentence)
+            entityRecognizedWords=set()
+            for ent in doc.ents :
+                #print(ent.text)
+                ## dodaje frazy z entity recognition, gdyż potem będą odrzucane
+                veryTempSetOfTokensFromNAll.add(ent.text)
+                for word in ent.text.split():
+                    entityRecognizedWords.add(word)
+
+                #print("recognized" + ent.text)
+
             ########### a co z stopwords?????????????
             for possibleNoun in doc:
                 if (possibleNoun.is_stop==False)and(possibleNoun.text not in nltk.corpus.stopwords.words("english")):
+                    if possibleNoun.text in entityRecognizedWords:
+                        #print("odrzucone " + possibleNoun.text)
+                        continue
                     veryTempSetOfTokensFromNAll.add(possibleNoun.text)
                     if possibleNoun.dep_=="nsubj":
                         veryTempSetOfTokensFromNSubj.add(possibleNoun.text)
@@ -270,9 +284,10 @@ foldersOK=createNecessaryFolders()
 #print("foldersOK: ",foldersOK)
 
 moviesLinksList,tmdbIdDict=loadMoviesLinks()
-
+#nltk.download()
 apiKey = "3435d02bdf0a3873406a88ea6917e4e9"
-OMDBapiKey="2fcb9dc" #przedawnil sie
+OMDBapiKey="c7927ea2" #przedawnil sie
+
 
 nlp=spacy.load('en')
 
