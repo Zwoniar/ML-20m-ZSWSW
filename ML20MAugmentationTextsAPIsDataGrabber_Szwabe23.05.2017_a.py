@@ -90,7 +90,7 @@ def getTMDbReviews(tmdbId,apiKey):
                 reviewFormatted = str.replace(review['content'], '\n', '')
                 reviewFormatted = str.replace(reviewFormatted, '\r', '')
                 movieReviews+=" "
-                movieReviews+=reviewFormatted.lower()
+                movieReviews+=reviewFormatted
                 #print("movieReviews: ",movieReviews)
             return movieReviews
         else:
@@ -126,7 +126,7 @@ def getTMDbMovieData(tmdbId,apiKey):
         movie['id'] = movie_data['id']
         movie['title'] = movie_data['title']
         #movie['plot'] = movie_data['overview'].lower()
-        movie['overview'] = movie_data['overview'].lower()
+        movie['overview'] = movie_data['overview']
         movie['reviews'] = getTMDbReviews(tmdbId,apiKey)
         return movie
     else:
@@ -146,7 +146,7 @@ def getOMDbMovieData(imdbId):
         movie = {}
         movie['id'] = movie_data['imdbID']
         movie['title'] = movie_data['Title']
-        movie['fullPlot'] = movie_data['Plot'].lower()
+        movie['fullPlot'] = movie_data['Plot']
     else:
        #print("There was an API %s error" % response.status_code)
        pass
@@ -154,7 +154,7 @@ def getOMDbMovieData(imdbId):
     response = requests.get(requestString)
     if response.status_code == 200:
         movie_data = response.json()
-        movie['shortPlot'] = movie_data['Plot'].lower()
+        movie['shortPlot'] = movie_data['Plot']
         return movie
     else:
        #print("There was an API %s error" % response.status_code)
@@ -204,8 +204,8 @@ def saveTokenizedTMDbMovieDataRecord(movieId,tokenizedTMDbMovieData):
     featuresList=[]
     tempKeysList=tokenizedTMDbMovieData.keys()
     for tempKeysListItem in tempKeysList:
-       #print("tempKeysListItem: ",tempKeysListItem)
-       #print("tokenizedTMDbMovieData[tempKeysListItem]: ",tokenizedTMDbMovieData[tempKeysListItem])
+        #print("tempKeysListItem: ",tempKeysListItem)
+        #print("tokenizedTMDbMovieData[tempKeysListItem]: ",tokenizedTMDbMovieData[tempKeysListItem])
         if not(tokenizedTMDbMovieData[tempKeysListItem]==[]):
             tempValueList=tokenizedTMDbMovieData[tempKeysListItem]
             for tempValueListItem in tempValueList:
@@ -231,30 +231,28 @@ def tokenizeMovieData(movieData):
     for tempKey in tempMovieDataKeys:
         tempSetOfTokensFromNAll=set()
         tempSetOfTokensFromNSubj=set()
+        tempSetOfTokensFromEntRecognizition=set()
         movieDataStr=str(movieData[tempKey])
        #print("TMDbMovieDataStr: ",TMDbMovieDataStr)
         tempSentencesList=doSentenceTokenization(movieDataStr)
         for tempSentence in tempSentencesList:
             veryTempSetOfTokensFromNSubj=set()
             veryTempSetOfTokensFromNAll=set()
-            #print("tempSentence: ",tempSentence)
-            # tempSentence = 'London is a big city in the United Kingdom.'
+            veryTempSetOfTokensFromEntRecognizition=set()
             doc = nlp(tempSentence)
             entityRecognizedWords=set()
             for ent in doc.ents :
-                #print(ent.text)
-                ## dodaje frazy z entity recognition, gdyż potem będą odrzucane
-                veryTempSetOfTokensFromNAll.add(ent.text)
+                print(ent.text)
+                veryTempSetOfTokensFromEntRecognizition.add(ent.text)
+                ## dodaje wyrazy z entity recognition, aby potem nie dorzucać ich do nsubj i all
                 for word in ent.text.split():
-                    entityRecognizedWords.add(word)
+                    entityRecognizedWords.add(word.lower())
 
-                #print("recognized" + ent.text)
-
+            doc = nlp(tempSentence.lower())
             ########### a co z stopwords?????????????
             for possibleNoun in doc:
                 if (possibleNoun.is_stop==False)and(possibleNoun.text not in nltk.corpus.stopwords.words("english")):
                     if possibleNoun.text in entityRecognizedWords:
-                        #print("odrzucone " + possibleNoun.text)
                         continue
                     veryTempSetOfTokensFromNAll.add(possibleNoun.text)
                     if possibleNoun.dep_=="nsubj":
@@ -271,11 +269,15 @@ def tokenizeMovieData(movieData):
 
             tempSetOfTokensFromNSubj.update(veryTempSetOfTokensFromNSubj)
             tempSetOfTokensFromNAll.update(veryTempSetOfTokensFromNAll)
+            tempSetOfTokensFromEntRecognizition.update(veryTempSetOfTokensFromEntRecognizition)
         tempListOfTokensFromNSubj=list(tempSetOfTokensFromNSubj)
         tempListOfTokensFromNAll=list(tempSetOfTokensFromNAll)
+        tempListOfTokensFromEntRecognition = list(tempSetOfTokensFromEntRecognizition)
        #print("tempListOfTokens: ",tempListOfTokens)
-        tokenizedMovieData[(tempKey,"nsubj")]=tempListOfTokensFromNSubj
-        tokenizedMovieData[(tempKey,"all")]=tempListOfTokensFromNAll
+        tokenizedMovieData[(tempKey, "nsubj")]=tempListOfTokensFromNSubj
+        tokenizedMovieData[(tempKey, "all")]=tempListOfTokensFromNAll
+        tokenizedMovieData[(tempKey, "all")] = tempListOfTokensFromNAll
+        tokenizedMovieData[(tempKey, "ner")] = tempListOfTokensFromEntRecognition
     return tokenizedMovieData
 
 
@@ -298,7 +300,7 @@ omdbMoviesDataList=[]
 
 #for tempMovieIdTempListFileLine in tempMovieIdTempListFile:
 #   tempMovieIdTempList.append(eval(tempMovieIdTempListFile[1]))
-tempMovieIdTempListFile=open("ml-20m/ratings.csv",'r')
+tempMovieIdTempListFile=open("../ml-20m/ratings.csv",'r')
 tempMovieIdTempList=[]
 reader = csv.reader(tempMovieIdTempListFile, delimiter = ',')
 for rowNumber in range(99):
